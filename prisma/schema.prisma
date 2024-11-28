@@ -1,0 +1,81 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+    provider = "postgresql"
+    // url      = "postgresql://persys_user:persys_password@localhost:5432/persysdb"
+    url = env("DATABASE_URL")
+}
+
+model User {
+    id        String      @id @default(uuid())
+    tweets    Tweet[]     @relation("UserTweets")
+    groups    GroupUser[]
+    createdAt DateTime    @default(now()) @map("c_created_at")
+
+    @@map("t_user")
+}
+
+model Group {
+    id           String       @id @default(uuid())
+    users        GroupUser[]
+    subgroups    GroupGroup[] @relation("ParentGroups")
+    parentGroups GroupGroup[] @relation("ChildGroups")
+
+    @@map("t_group")
+}
+
+model GroupUser {
+    id      String @id @default(uuid())
+    user    User   @relation(fields: [userId], references: [id])
+    userId  String @map("fk_user")
+    group   Group  @relation(fields: [groupId], references: [id])
+    groupId String @map("fk_group")
+
+    @@unique([userId, groupId])
+    @@map("t_group_user")
+}
+
+model GroupGroup {
+    id          String @id @default(uuid())
+    parentGroup Group  @relation("ParentGroups", fields: [parentId], references: [id])
+    parentId    String @map("fk_parent")
+    childGroup  Group  @relation("ChildGroups", fields: [childId], references: [id])
+    childId     String @map("fk_child")
+
+    @@unique([parentId, childId])
+    @@map("t_group_group")
+}
+
+model Tweet {
+    id            String            @id @default(uuid())
+    createdAt     DateTime          @default(now()) @map("c_created_at")
+    content       String            @map("c_content")
+    author        User              @relation("UserTweets", fields: [authorId], references: [id])
+    authorId      String            @map("fk_author")
+    hashtags      String[]          @map("c_hashtags")
+    category      TweetCategory?    @map("c_category")
+    location      String?           @map("c_location")
+    parent        Tweet?            @relation("TweetReplies", fields: [parentTweetId], references: [id])
+    parentTweetId String?           @map("fk_parent")
+    replies       Tweet[]           @relation("TweetReplies")
+    viewUserIds   String[]          @map("c_viewers") @default([])  // List of user IDs who can view this tweet
+    editUserIds   String[]          @map("c_editors") @default([])// List of user IDs who can edit this tweet
+    inheritView   Boolean           @default(false) @map("c_inherit_view")
+    inheritEdit   Boolean           @default(false) @map("c_inherit_edit")
+
+    @@map("t_tweet")
+    @@index([authorId], name: "idx_author")
+    @@index([parentTweetId], name: "idx_parent")
+    @@index([createdAt, viewUserIds], name: "idx_viewers")
+}
+
+
+enum TweetCategory {
+    Sport
+    Finance
+    Tech
+    News
+}

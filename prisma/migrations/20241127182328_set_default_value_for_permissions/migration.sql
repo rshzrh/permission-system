@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "t_tweet" ALTER COLUMN "editUserIds" SET DEFAULT ARRAY[]::TEXT[],
+ALTER COLUMN "viewUserIds" SET DEFAULT ARRAY[]::TEXT[];
